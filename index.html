@@ -3,556 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anton OS - Local Simulation</title>
-    <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load React and ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <!-- Load Babel to process JSX in the browser -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>Popup & Redirect Test Page</title>
     <style>
-        /* Hide scrollbar for the tab navigation area */
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-        .scrollbar-hide {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            text-align: center;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
-<body class="bg-zinc-950">
+<body>
 
-    <div id="root">
-        <!-- React component will be rendered here -->
-    </div>
+    <h1>Action Required to View Content</h1>
+    <p>Click the button below to proceed. This will trigger a popup alert and attempt to open the target website in a new window/tab.</p>
 
-    <script type="text/babel">
-        const { useState, useEffect, useCallback, useMemo } = React;
+    <button id="triggerButton">Click to Enable Popups and Load Site</button>
 
-        // --- Global Constants (No Firebase Config Needed) ---
-        const ADMIN_EMAIL = 'antonkrupinski0@gmail.com';
-        const ADMIN_PASSWORD = 'Anton201309!'; // Simulated password check
-        const BANNED_REDIRECT_URL = 'https://banned.antonkrupinski.com';
-        
-        // Simulated database structure for local state
-        const initialLocalUsers = [
-            { 
-                id: '12345-admin-uid-67890', 
-                email: ADMIN_EMAIL, 
-                password: ADMIN_PASSWORD, 
-                role: 'admin', 
-                isBanned: false 
-            },
-        ];
+    <script>
+        // --- Core Functionality ---
 
-        // --- The Main Application Component (App) ---
-        const App = () => {
-            // Local State to simulate database and user sessions
-            const [localUsersList, setLocalUsersList] = useState(initialLocalUsers);
-            const [userProfile, setUserProfile] = useState(null); // Currently logged-in user's profile
-            const [currentTab, setCurrentTab] = useState('Home');
-            const [modal, setModal] = useState(null); // 'login', 'signup'
-            const [emailInput, setEmailInput] = useState('');
-            const [passwordInput, setPasswordInput] = useState('');
-            const [message, setMessage] = useState('');
+        // Function to handle the popup and redirect
+        function attemptPopupAndRedirect() {
+            // 1. Ask the user to enable popups/redirects
+            alert("Please ensure popups and redirects are enabled in your browser to view the content.");
 
-            // Derived States
-            const isLoggedIn = !!userProfile;
-            const isBanned = userProfile?.isBanned === true;
-            const isAdmin = userProfile?.role === 'admin';
-            const [isAuthReady, setIsAuthReady] = useState(true);
+            // 2. Attempt to open a new window/tab for the target site
+            const targetURL = 'https://utopiaweb.org/';
+            
+            // Note: window.open() is the standard way to trigger a popup/redirect.
+            // It bypasses the iframe restrictions that https://utopiaweb.org/ uses.
+            const newWindow = window.open(targetURL, '_blank');
 
-            // --- Authentication Handlers (Simulated Sign Up/In) ---
-
-            const handleSignAction = useCallback((isSignUp) => {
-                setMessage('');
-
-                // Find existing user by email
-                const existingUser = localUsersList.find(u => u.email === emailInput);
-
-                // 1. SIGN IN (Login)
-                if (!isSignUp) {
-                    if (!existingUser) {
-                        setMessage('Error: No account found with this email. Please sign up.');
-                        return;
-                    }
-                    if (existingUser.password !== passwordInput) {
-                         setMessage('Error: Incorrect password.');
-                         return;
-                    }
-
-                    // Successful Login
-                    setUserProfile(existingUser);
-                    if (existingUser.isBanned) {
-                        setCurrentTab('Banned');
-                    } else {
-                        setCurrentTab('Home');
-                    }
-                    setMessage('Successfully signed in. Welcome!');
-                    setModal(null);
-                    return;
-                }
-
-                // 2. SIGN UP (Registration)
-                if (existingUser) {
-                    setMessage('Error: An account already exists with this email. Please sign in.');
-                    return;
-                }
-
-                // Generate a simple unique ID for the new user
-                const newUserId = `user-${Date.now()}`;
-                const newUserProfile = {
-                    id: newUserId,
-                    email: emailInput,
-                    password: passwordInput,
-                    role: emailInput === ADMIN_EMAIL ? 'admin' : 'user',
-                    isBanned: false,
-                    createdAt: new Date().toISOString(),
-                };
-
-                // Add to the simulated database
-                setLocalUsersList(prevList => [...prevList, newUserProfile]);
-                
-                // Log the new user in immediately
-                setUserProfile(newUserProfile);
-                setCurrentTab('Home');
-                setMessage('Sign Up successful! Welcome to Anton OS.');
-                setModal(null);
-
-            }, [localUsersList, emailInput, passwordInput]);
-
-            const handleSignOut = useCallback(() => {
-                setUserProfile(null);
-                setEmailInput('');
-                setPasswordInput('');
-                setCurrentTab('Home');
-                setMessage('Signed out successfully.');
-            }, []);
-
-            // --- Admin Action Handlers (Modifies Local State) ---
-
-            const handleAdminAction = useCallback((targetUserId, action) => {
-                if (!isAdmin) return;
-                setMessage('');
-
-                setLocalUsersList(prevList => prevList.map(u => {
-                    if (u.id !== targetUserId) return u;
-
-                    let updatedUser = { ...u };
-
-                    switch (action) {
-                        case 'delete':
-                            // Filter this user out later
-                            return null;
-                        case 'ban':
-                            updatedUser.isBanned = true;
-                            setMessage(`User ${u.email} BANNED.`);
-                            break;
-                        case 'unban':
-                            updatedUser.isBanned = false;
-                            setMessage(`User ${u.email} UNBANNED.`);
-                            break;
-                        case 'grantAdmin':
-                            updatedUser.role = 'admin';
-                            setMessage(`User ${u.email} granted ADMIN role.`);
-                            break;
-                        case 'removeAdmin':
-                            updatedUser.role = 'user';
-                            setMessage(`User ${u.email} removed as admin.`);
-                            break;
-                        default:
-                            break;
-                    }
-
-                    // If the current logged-in user is the one being modified, update their session profile too
-                    if (userProfile?.id === targetUserId) {
-                        setUserProfile(updatedUser);
-                    }
-
-                    return updatedUser;
-                }).filter(u => u !== null)); // Remove deleted user
-
-                if (action === 'delete') {
-                    setMessage(`User ${targetUserId} deleted.`);
-                    // If the deleted user was the logged-in user, sign them out
-                    if (userProfile?.id === targetUserId) {
-                        handleSignOut();
-                    }
-                }
-            }, [isAdmin, userProfile, handleSignOut]);
-
-            // --- UI Components ---
-
-            const tabData = useMemo(() => [
-                { name: 'Home', url: '#' },
-                { name: 'Browser', url: 'https://browse.antonkrupinski.com' },
-                { name: 'AI', url: 'https://ai.antonkrupinski.com' },
-                { name: 'VM', url: 'https://vm.antonkrupinski.com' },
-                { name: 'YouTube', url: 'https://youtube.antonkrupinski.com' },
-                { name: 'Support', url: 'https://support.antonkrupinski.com' },
-                ...(isAdmin ? [{ name: 'Admin', url: '#' }] : []),
-            ], [isAdmin]);
-
-
-            const TabButton = ({ name, url }) => {
-                const isActive = currentTab === name;
-                const isRestricted = name !== 'Home' && name !== 'Admin' && name !== 'Banned'; 
-
-                const handleClick = () => {
-                    if (isBanned) {
-                        setCurrentTab('Banned');
-                        return;
-                    }
-                    if (isRestricted && !isLoggedIn) {
-                        setMessage('Please sign in to access this feature.');
-                        setModal('login');
-                        return;
-                    }
-                    if (url && url !== '#') {
-                        // Simulate external navigation
-                        window.open(url, '_blank');
-                        setMessage(`Launching ${name} at ${url}...`);
-                    }
-                    setCurrentTab(name);
-                };
-
-                const baseClasses = "pb-3 px-2 font-semibold text-sm transition-colors duration-200 cursor-pointer border-b-2";
-                const activeClasses = "text-cyan-400 border-cyan-500";
-                const inactiveClasses = "text-zinc-400 border-transparent hover:text-cyan-300 hover:border-cyan-500/50";
-                const restrictedClasses = isRestricted && !isLoggedIn ? 'opacity-50 cursor-not-allowed' : '';
-
-                return (
-                    <div
-                        className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses} ${restrictedClasses}`}
-                        onClick={handleClick}
-                    >
-                        {name}
-                    </div>
-                );
-            };
-
-            const MainContent = () => {
-                if (!isAuthReady) {
-                    return (
-                        <div className="flex justify-center items-center h-full text-cyan-400 font-mono text-xl">
-                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-cyan-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Establishing Secure Connection...
-                        </div>
-                    );
-                }
-
-                if (isBanned || currentTab === 'Banned') {
-                    return (
-                        <div className="p-8 text-center bg-red-900/40 rounded-xl ring-2 ring-red-500/50 shadow-2xl space-y-4">
-                            <h2 className="text-4xl font-extrabold text-red-400 font-mono">ACCESS DENIED - SYSTEM INTERRUPT</h2>
-                            <p className="text-xl text-red-200">
-                                Your access to Anton OS has been permanently revoked.
-                            </p>
-                            <p className="text-lg text-red-100 italic">
-                                All further attempts to interact with the system will result in a redirect to:
-                                <a href={BANNED_REDIRECT_URL} className="block text-red-300 underline font-semibold mt-2">{BANNED_REDIRECT_URL}</a>
-                            </p>
-                            <p className="text-xs text-gray-500 pt-4">Reason: Policy Violation. UID: {userProfile?.id || 'N/A'}</p>
-                        </div>
-                    );
-                }
-
-
-                switch (currentTab) {
-                    case 'Home':
-                        return (
-                            <div className="p-8 space-y-8">
-                                <h2 className="text-4xl font-extrabold text-cyan-400">ANTON OS v7.0 (Stellaris)</h2>
-                                <p className="text-xl text-zinc-300 font-light">Welcome, {isLoggedIn ? userProfile?.email || 'Authenticated User' : 'Guest Entity'}.</p>
-                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
-                                    <InfoCard title="System Status" content={isLoggedIn ? "Online | Authorized" : "Restricted | Login Required"} color="green" />
-                                    <InfoCard title="User Role" content={userProfile?.role || 'Unregistered'} color="blue" />
-                                    <InfoCard title="Active Modules" content="6" color="yellow" />
-                                </div>
-                                <p className="text-md text-zinc-400 pt-4 border-t border-zinc-700 pt-6">
-                                    This dashboard provides centralized access to high-performance computing resources and AI services. Please navigate the tabs to begin.
-                                </p>
-                                {!isLoggedIn && (
-                                     <div className="p-4 bg-cyan-900/20 border border-cyan-600/50 rounded-lg">
-                                        <p className="text-cyan-300 font-mono text-sm">
-                                            <span className="text-yellow-400 mr-2 font-semibold">ACCESS NOTICE:</span>
-                                            Secure authentication is required to initiate restricted modules.
-                                        </p>
-                                     </div>
-                                )}
-                            </div>
-                        );
-                    case 'Admin':
-                        // Pass a filtered list, excluding the current admin
-                        const usersToManage = localUsersList.filter(u => u.id !== userProfile?.id); 
-                        return isAdmin ? <AdminPanel usersList={usersToManage} handleAdminAction={handleAdminAction} /> : (
-                            <div className="p-8 text-center bg-red-900/40 rounded-xl ring-2 ring-red-500/50 shadow-2xl space-y-4">
-                                <h2 className="text-4xl font-extrabold text-red-400 font-mono">ACCESS DENIED</h2>
-                                <p className="text-xl text-red-200">Administrative privileges required for this module.</p>
-                            </div>
-                        );
-                    default:
-                        if (!isLoggedIn) {
-                            return (
-                                <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-zinc-800/50 rounded-xl shadow-inner space-y-4">
-                                    <h2 className="text-4xl font-extrabold text-yellow-400">LOGIN REQUIRED</h2>
-                                    <p className="text-xl text-zinc-300">Access to '{currentTab}' module is restricted. Please sign in or sign up.</p>
-                                    <button
-                                        className="mt-4 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 transition duration-200 rounded-lg text-white font-semibold shadow-md ring-2 ring-cyan-500/50"
-                                        onClick={() => setModal('login')}
-                                    >
-                                        Initiate Secure Login
-                                    </button>
-                                </div>
-                            );
-                        }
-                        return (
-                            <div className="p-8">
-                                <h2 className="text-4xl font-extrabold text-cyan-400">{currentTab} Module</h2>
-                                <p className="text-lg text-zinc-400 mt-4">
-                                    Module '{currentTab}' initiated. This space would display the dedicated secure application.
-                                </p>
-                                <div className="h-64 mt-6 flex items-center justify-center border border-dashed border-cyan-600/50 rounded-lg text-cyan-500/70 bg-zinc-800/50">
-                                    <p className="font-mono text-sm">Application Interface Placeholder...</p>
-                                </div>
-                            </div>
-                        );
-                }
-            };
-
-            const InfoCard = ({ title, content, color }) => (
-                <div className={`p-4 bg-zinc-800/70 border-l-4 border-${color}-500 rounded-lg shadow-inner`}>
-                    <p className="text-sm font-semibold text-zinc-400 uppercase">{title}</p>
-                    <p className={`text-xl font-bold text-${color}-400 mt-1`}>{content}</p>
-                </div>
-            );
-
-            const AuthModal = ({ type, onClose }) => {
-                const title = type === 'login' ? 'SECURE SIGN IN' : 'NEW USER REGISTRATION';
-                const buttonText = type === 'login' ? 'Sign In' : 'Sign Up';
-                const isSignUp = type === 'signup';
-
-                const handleSubmit = (e) => {
-                    e.preventDefault();
-                    handleSignAction(isSignUp);
-                };
-
-                return (
-                    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-                        <div className="bg-zinc-900 border border-cyan-600/70 shadow-2xl shadow-cyan-900/50 rounded-xl w-full max-w-md p-6 space-y-4 transition-all transform scale-100">
-                            <h3 className="text-2xl font-mono text-cyan-400 border-b border-zinc-700 pb-3">{title}</h3>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-mono text-zinc-300 mb-1">Email</label>
-                                    <input
-                                        type="email"
-                                        value={emailInput}
-                                        onChange={(e) => setEmailInput(e.target.value)}
-                                        className="w-full p-3 bg-zinc-800 text-white border border-zinc-700 rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500"
-                                        required
-                                        autoFocus // Fix: Added autoFocus to the first input
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-mono text-zinc-300 mb-1">Password</label>
-                                    <input
-                                        type="password"
-                                        value={passwordInput}
-                                        onChange={(e) => setPasswordInput(e.target.value)}
-                                        className="w-full p-3 bg-zinc-800 text-white border border-zinc-700 rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500"
-                                        required
-                                    />
-                                </div>
-                                
-                                {isSignUp && (
-                                    <p className="text-xs text-zinc-500">
-                                        Note: To claim the admin role, use the pre-configured credentials during sign up.
-                                    </p>
-                                )}
-
-
-                                {message && (
-                                    <div className="text-sm p-3 rounded bg-red-900/50 text-red-300 font-mono border border-red-700/50">
-                                        {message}
-                                    </div>
-                                )}
-
-                                <div className="flex justify-end items-center pt-2 space-x-4">
-                                    <button
-                                        type="button"
-                                        onClick={onClose}
-                                        className="px-4 py-2 text-zinc-400 hover:text-white transition duration-200 rounded-lg hover:bg-zinc-800"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 transition duration-200 rounded-lg text-white font-semibold shadow-md ring-2 ring-cyan-500/50"
-                                    >
-                                        {buttonText}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                );
-            };
-
-            const AdminPanel = ({ usersList, handleAdminAction }) => (
-                <div className="p-8">
-                    <h2 className="text-4xl font-extrabold text-red-400 border-b border-zinc-700 pb-3">ADMINISTRATION CONTROL</h2>
-                    <p className="text-lg text-zinc-400 mt-4">Manage user privileges and access status. (Local Simulation)</p>
-
-                    {/* Table Header */}
-                    <div className="mt-6 hidden md:grid grid-cols-[1fr_0.5fr_2fr] gap-4 pb-2 border-b border-zinc-700/70 text-zinc-400 font-mono text-xs uppercase font-semibold">
-                        <div>Email</div>
-                        <div>Role/Status</div>
-                        <div className="text-right">Actions</div>
-                    </div>
-
-                    <div className="mt-4 space-y-3">
-                        {usersList.length === 0 ? (
-                            <p className="text-zinc-500 font-mono pt-4">No other users found in the system.</p>
-                        ) : (
-                            usersList.map(u => (
-                                <div key={u.id} className={`p-4 rounded-lg flex flex-col md:grid md:grid-cols-[1fr_0.5fr_2fr] gap-4 items-center border ${u.isBanned ? 'bg-red-900/40 border-red-700/50' : 'bg-zinc-800/70 border-zinc-700/50'} transition-all duration-300`}>
-                                    <div className="w-full md:w-auto break-all">
-                                        <p className="text-base font-medium text-white">{u.email || 'Anonymous User'}</p>
-                                        <p className="text-xs text-zinc-500">ID: {u.id}</p>
-                                    </div>
-                                    <div className="w-full md:w-auto">
-                                        <p className={`text-sm font-semibold ${u.role === 'admin' ? 'text-yellow-400' : (u.isBanned ? 'text-red-400' : 'text-cyan-400')}`}>
-                                            {u.isBanned ? 'BANNED' : u.role.toUpperCase()}
-                                        </p>
-                                    </div>
-                                    <div className="w-full md:w-auto flex flex-wrap justify-end gap-2 mt-3 md:mt-0">
-                                        <button
-                                            onClick={() => handleAdminAction(u.id, u.isBanned ? 'unban' : 'ban')}
-                                            className={`px-3 py-1 text-xs rounded-full transition-colors ${u.isBanned ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
-                                        >
-                                            {u.isBanned ? 'Unban' : 'Ban'}
-                                        </button>
-                                        <button
-                                            onClick={() => handleAdminAction(u.id, u.role === 'admin' ? 'removeAdmin' : 'grantAdmin')}
-                                            className={`px-3 py-1 text-xs rounded-full transition-colors ${u.role === 'admin' ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-cyan-600 hover:bg-cyan-700'}`}
-                                        >
-                                            {u.role === 'admin' ? 'Remove Admin' : 'Grant Admin'}
-                                        </button>
-                                        <button
-                                            onClick={() => handleAdminAction(u.id, 'delete')}
-                                            className="px-3 py-1 text-xs rounded-full bg-zinc-600 hover:bg-zinc-700 transition-colors"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                    {message && (
-                        <div className="mt-6 text-sm p-3 rounded-lg bg-red-900/50 text-red-300 font-mono border border-red-700">
-                            {message}
-                        </div>
-                    )}
-                </div>
-            );
-
-
-            return (
-                <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8">
-                    {/* Main Application Container */}
-                    <div className="max-w-7xl mx-auto bg-zinc-900/90 rounded-xl shadow-2xl shadow-cyan-900/30 border border-zinc-800 overflow-hidden">
-
-                        {/* Header and Branding */}
-                        <header className="p-4 md:p-6 bg-zinc-900 flex justify-between items-center border-b border-zinc-800">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-4 h-4 rounded-full bg-cyan-500 shadow-lg shadow-cyan-500/50 animate-pulse"></div>
-                                <h1 className="text-3xl font-extrabold text-cyan-400 tracking-wider">
-                                    ANTON
-                                    <span className="text-sm font-light text-zinc-500 ml-1">OS</span>
-                                </h1>
-                            </div>
-                            <div className="flex items-center space-x-3 md:space-x-4">
-                                {isLoggedIn ? (
-                                    <>
-                                        <span className="hidden sm:inline text-xs font-mono text-green-400 bg-zinc-800 px-3 py-1 rounded-full border border-green-700/50">
-                                            {userProfile?.role.toUpperCase() || 'USER'} | ONLINE
-                                        </span>
-                                        <button
-                                            onClick={handleSignOut}
-                                            className="px-3 py-1 bg-red-600 hover:bg-red-700 transition duration-200 rounded-lg text-white font-semibold text-sm shadow-md"
-                                        >
-                                            Sign Out
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={() => setModal('login')}
-                                            className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 transition duration-200 rounded-lg text-white font-semibold text-sm shadow-md"
-                                        >
-                                            Sign In
-                                        </button>
-                                        <button
-                                            onClick={() => setModal('signup')}
-                                            className="hidden sm:inline px-3 py-1 bg-zinc-800 hover:bg-zinc-700 transition duration-200 rounded-lg text-cyan-200 font-semibold text-sm"
-                                        >
-                                            Sign Up
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </header>
-
-                        {/* Tab Navigation */}
-                        <nav className="p-4 bg-zinc-900 border-b border-zinc-800">
-                            <div className="flex space-x-6 md:space-x-8 overflow-x-auto whitespace-nowrap scrollbar-hide">
-                                {tabData.map(tab => (
-                                    <TabButton key={tab.name} name={tab.name} url={tab.url} />
-                                ))}
-                            </div>
-                        </nav>
-
-                        {/* Main Content Area */}
-                        <main className="min-h-[60vh] p-4 md:p-6 lg:p-8">
-                            <div className="bg-zinc-900/70 p-6 rounded-xl border border-zinc-800 shadow-inner shadow-black/30">
-                                <MainContent />
-                            </div>
-                        </main>
-
-                        {/* Footer and System Info */}
-                        <footer className="p-4 bg-zinc-900/70 text-center border-t border-zinc-800">
-                            <p className="text-xs text-zinc-500 font-mono">
-                                System: Local Simulation | User: {userProfile?.email || 'N/A'}
-                            </p>
-                        </footer>
-                    </div>
-
-                    {/* Modals */}
-                    {(modal === 'login' || modal === 'signup') && (
-                        <AuthModal
-                            type={modal}
-                            onClose={() => { setModal(null); setMessage(''); }}
-                        />
-                    )}
-                </div>
-            );
-        };
-
-        // Render the main App component using React 18's createRoot
-        const rootElement = document.getElementById('root');
-        if (rootElement) {
-            const root = ReactDOM.createRoot(rootElement);
-            root.render(<App />);
+            // Optional: Check if the window was successfully opened (not blocked)
+            if (newWindow) {
+                console.log("New window/tab opened successfully.");
+                // Give the browser focus to the new window
+                newWindow.focus(); 
+            } else {
+                console.warn("Popup blocked! Please check your browser settings.");
+            }
         }
+
+        // --- Event Listener ---
+
+        // Get the button element
+        const button = document.getElementById('triggerButton');
+
+        // Attach the function to the button's click event
+        // Modern browsers require a user action (like a click) to allow popups.
+        button.addEventListener('click', attemptPopupAndRedirect);
+
     </script>
+
+</body>
+</html>
 </body>
 </html>
